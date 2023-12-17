@@ -1,0 +1,45 @@
+name: Build Docker image
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+env:
+  node-version: 18-bullseye-slim
+  ecr-image: msangals/git-lfs-s3-proxy
+
+jobs:
+  create_docker_image:
+    timeout-minutes: 30
+    name: Build image 0.${{ github.run_number }}
+    runs-on: ubuntu
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build docker image
+        run: |
+          docker buildx create --use --platform=linux/arm64,linux/amd64
+          docker buildx inspect --bootstrap
+          docker buildx build \
+            --build-arg="NODE_VERSION=${{ env.node-version }}" \
+            -t ${{ env.ecr-image }}:latest \
+            -t ${{ env.ecr-image }}:0.0.${{ github.run_number }} \
+            --platform linux/amd64,linux/arm64 \
+            --push \
+            .

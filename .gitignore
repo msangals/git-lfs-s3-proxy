@@ -1,0 +1,48 @@
+# IntelliJ IDEA
+.idea/
+
+# User-specific files
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Sensitive or high-churn files
+.idea/workspace.xml
+.idea/tasks.xml
+
+# Gradle files
+.idea/gradle.xml
+.idea/libraries
+
+# CMake
+cmake-build-*/
+
+# Mongo Explorer plugin
+.idea/mongoSettings.xml
+
+# File-based project format
+*.editorconfig
+
+# Code-style configurations
+.idea/codeStyles/
+
+# Recycle bin used on Windows
+$RECYCLE.BIN/
+
+# Thumbnails directory on Windows
+Thumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on Network
+$RECYCLE.BIN/
+
+# VS Code directories
+.vscode/
+
+# Node.js
+node_modules/
+
+/dist
