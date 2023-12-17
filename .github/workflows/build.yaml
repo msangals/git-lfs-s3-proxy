@@ -15,7 +15,7 @@ jobs:
   create_docker_image:
     timeout-minutes: 30
     name: Build image 0.0.${{ github.run_number }}
-    runs-on: ubuntu
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout git repo
         uses: actions/checkout@v4
