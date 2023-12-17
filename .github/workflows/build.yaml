@@ -14,7 +14,7 @@ env:
 jobs:
   create_docker_image:
     timeout-minutes: 30
-    name: Build image 0.${{ github.run_number }}
+    name: Build image 0.0.${{ github.run_number }}
     runs-on: ubuntu
     steps:
       - name: Checkout git repo
