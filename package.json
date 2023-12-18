@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "license": "ISC",
-  "author": "marcel.sangals <msangals@hotmail.com>",
+  "author": "marcel.sangals",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.474.0",
     "@aws-sdk/credential-provider-node": "^3.474.0",
