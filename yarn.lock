@@ -677,10 +677,10 @@
     "@smithy/util-utf8" "^2.0.2"
     tslib "^2.5.0"
 
-"@aws-sdk/s3-request-presigner@^3.476.0":
-  version "3.476.0"
-  resolved "https://registry.yarnpkg.com/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.476.0.tgz#bf8e3c58c977a681b2f021ee9007d141d9658e60"
-  integrity sha512-vGdEGiBhU0Eo2KL1a/PKLi+XNNaba+AVeqW1RS4SRXhO1A60xFDWDrfU89ZQb/9O9vttGOPExc/GR57D103mUw==
+"@aws-sdk/s3-request-presigner@^3.478.0":
+  version "3.478.0"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.478.0.tgz#c80237683101646e710fa9f5d1a4a5ea37373f3b"
+  integrity sha512-Ra9ptlSZvMlmw+4zujuVhWRN4QxCpmNnnZPn8KHnll7Jmat6Fii7zMf9NUIJ5etLvTlY8y/yUEleRf9KXPBNlA==
   dependencies:
     "@aws-sdk/signature-v4-multi-region" "3.474.0"
     "@aws-sdk/types" "3.468.0"
