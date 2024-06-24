@@ -16,7 +16,7 @@
     "@aws-sdk/credential-provider-node": "^3.600.0",
     "@aws-sdk/s3-presigned-post": "^3.540.0",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
-    "@types/node": "^20.14.3",
+    "@types/node": "^20.14.8",
     "aws-sdk": "^2.1645.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
