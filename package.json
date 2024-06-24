@@ -17,7 +17,7 @@
     "@aws-sdk/s3-presigned-post": "^3.540.0",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
     "@types/node": "^20.14.3",
-    "aws-sdk": "^2.1645.0",
+    "aws-sdk": "^2.1646.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "express": "^4.19.2",
