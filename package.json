@@ -12,22 +12,17 @@
   "license": "ISC",
   "author": "marcel.sangals",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.485.0",
-    "@aws-sdk/credential-provider-node": "^3.600.0",
-    "@aws-sdk/s3-presigned-post": "^3.540.0",
-    "@aws-sdk/s3-request-presigner": "^3.600.0",
-    "@types/node": "^20.14.3",
-    "aws-sdk": "^2.1645.0",
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "node-fetch": "^3.3.2",
-    "typescript": "^5.4.5"
+    "@aws-sdk/client-s3": "^3.1019.0",
+    "@aws-sdk/credential-provider-env": "^3.972.23",
+    "@aws-sdk/credential-provider-ini": "^3.972.26",
+    "@aws-sdk/s3-request-presigner": "^3.1019.0",
+    "express": "^5.2.1"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "ts-node": "^10.9.2"
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.19.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   },
   "repository": "git@github.com:msangals/git-lfs-s3-proxy.git"
 }
