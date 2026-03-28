@@ -1,180 +1,170 @@
-# Git LFS S3 Proxy Documentation
+# Git LFS S3 Proxy
 
-## Introduction
+A lightweight Node.js proxy that connects [Git LFS](https://git-lfs.com/) clients to Amazon S3. Instead of storing large files on your Git host, this proxy responds to Git LFS batch requests with pre-signed S3 URLs so clients upload and download directly to/from your own bucket.
 
-The Git LFS (Large File Storage) S3 Proxy is a server application that acts as a proxy between a Git LFS client and an Amazon S3 bucket. It allows seamless integration of Git LFS with S3 for storing and retrieving large files. This proxy handles Git LFS batch requests, generating pre-signed URLs for S3 upload and download operations.
+## How it works
+
+```
+git push (LFS)              git pull (LFS)
+      |                           |
+      v                           v
+ ┌──────────┐              ┌──────────┐
+ │ LFS batch│  POST /batch │ LFS batch│
+ │ request  │─────────────>│ response │
+ └──────────┘              └──────────┘
+                  |
+                  v
+         ┌───────────────┐
+         │  git-lfs-s3   │  generates pre-signed
+         │    proxy       │  S3 URLs (1 hr TTL)
+         └───────────────┘
+                  |
+                  v
+         ┌───────────────┐
+         │   Amazon S3   │  client uploads/downloads
+         │   (your bucket)│  directly via signed URL
+         └───────────────┘
+```
+
+The proxy never touches file content. It only brokers pre-signed URLs.
+
+Objects are stored in S3 under the key pattern:
+
+```
+{organization}/{repository}/objects/{oid}
+```
 
 ## Prerequisites
 
-Before using the Git LFS S3 Proxy, ensure that the following dependencies are installed:
+- Node.js 18+
+- An AWS account with an S3 bucket
+- AWS credentials (environment variables or CLI profile)
 
--   Node.js
--   Yarn (Package Manager for Node.js)
-
-Install necessary Node.js packages using Yarn by running:
+## Quick start
 
 ```shell
-yarn install
+npm install
+npm run build
 ```
 
-## Configuration
+Set the required environment variables and start the server:
 
-### AWS Configuration
+```shell
+export S3_BUCKET=my-git-lfs-bucket
+export AWS_REGION=eu-west-1            # optional, defaults to eu-west-1
+export AWS_ACCESS_KEY_ID=AKIA...
+export AWS_SECRET_ACCESS_KEY=...
 
-Set up AWS credentials either through environment variables or a profile in the AWS CLI. The proxy uses the AWS SDK for JavaScript v3 to interact with S3.
-
-Environment variables:
-
--   `AWS_REGION`: AWS region (default is "eu-west-1")
--   `AWS_PROFILE`: AWS CLI profile name
-
-Or:
-
--   `AWS_REGION`: AWS region (default is "eu-west-1")
--   `AWS_ACCESS_KEY_ID`
--   `AWS_SECRET_ACCESS_KEY`
--   `AWS_SESSION_TOKEN`
-
-### Proxy Configuration
-
-Configure the proxy by setting the following environment variables:
-
--   `S3_BUCKET`: S3 bucket name where Git LFS objects will be stored.
-
-## Running the Proxy
-
-Start the Git LFS S3 Proxy by executing the following command:
-
-```
-yarn start
+npm start
 ```
 
-Or using the prebuild docker image:
+The server starts on `http://localhost:3000`. On startup it validates S3 connectivity and will refuse to start if credentials are invalid or `S3_BUCKET` is not set.
+
+## Docker
+
+A pre-built multi-arch image (`linux/amd64`, `linux/arm64`) is available on Docker Hub:
+
+```shell
+docker run \
+  --name git_lfs_proxy \
+  -e S3_BUCKET=my-git-lfs-bucket \
+  -e AWS_ACCESS_KEY_ID=AKIA... \
+  -e AWS_SECRET_ACCESS_KEY=... \
+  -p 3000:3000 \
+  msangals/git-lfs-s3-proxy
+```
+
+Or use an AWS CLI profile by mounting your credentials:
 
 ```shell
 docker run \
   --name git_lfs_proxy \
   -v ~/.aws:/root/.aws \
   -e AWS_PROFILE=my-aws-profile \
-  -e S3_BUCKET=my-git-lfs-s3-bucket \
+  -e S3_BUCKET=my-git-lfs-bucket \
   -p 3000:3000 \
   msangals/git-lfs-s3-proxy
 ```
 
-The proxy will be accessible at `http://localhost:3000` by default.
+## Configuration
 
-## Endpoints
+### Environment variables
 
-### 1\. Git LFS Batch Endpoint
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `S3_BUCKET` | Yes | — | S3 bucket name for storing LFS objects |
+| `AWS_REGION` | No | `eu-west-1` | AWS region for the S3 client |
+| `AWS_PROFILE` | No | — | AWS CLI profile name (reads from `~/.aws/credentials`) |
+| `AWS_ACCESS_KEY_ID` | Conditional | — | Required when `AWS_PROFILE` is not set |
+| `AWS_SECRET_ACCESS_KEY` | Conditional | — | Required when `AWS_PROFILE` is not set |
+| `AWS_SESSION_TOKEN` | No | — | Optional session token for temporary credentials |
 
-#### Endpoint
+If `AWS_PROFILE` is set, credentials are loaded from the AWS CLI configuration. Otherwise, credentials are read from environment variables.
 
--   `POST /:organizationName/:repositoryName/objects/batch`
+## Client setup
 
-#### Purpose
+Add a `.lfsconfig` file to the root of any Git repository that should use this proxy:
 
-Handles Git LFS batch requests, providing pre-signed URLs for S3 upload and download operations.
+```ini
+[lfs]
+    url = http://localhost:3000/myorganization/myrepository
+```
 
-#### Request Format
+Replace `myorganization` and `myrepository` with the actual names. These values determine the S3 key prefix for stored objects.
 
--   Accepts Git LFS batch requests in JSON format.
+After committing `.lfsconfig`, standard `git lfs push` and `git lfs pull` commands will route through the proxy.
 
-#### Response Format
+## API endpoints
 
--   Responds with Git LFS batch response containing pre-signed URLs.
+### `POST /:org/:repo/objects/batch`
 
-### 2\. List Objects Endpoint
+The core Git LFS batch endpoint. Accepts `application/vnd.git-lfs+json` requests and returns pre-signed S3 URLs for upload or download operations. URLs expire after 1 hour.
 
-#### Endpoint
+### `GET /list-objects`
 
--   `GET /list-objects`
+Lists all object keys in the configured S3 bucket. Returns JSON:
 
-#### Purpose
+```json
+{ "objectKeys": ["org/repo/objects/abc123...", ...] }
+```
 
-Lists objects in the configured S3 bucket.
+### `DELETE /delete-all-objects`
 
-#### Response Format
+Deletes **all** objects in the configured S3 bucket. Handles pagination for buckets with more than 1,000 objects.
 
--   Responds with a JSON object containing a list of object keys.
+> **Warning:** This deletes everything in the bucket, not scoped to a single repository.
 
-### 3\. Delete All Objects Endpoint
+### `GET /health`
 
-#### Endpoint
+Returns `{"status": "ok"}`. Useful for load balancer health checks.
 
--   `DELETE /delete-all-objects`
+## npm scripts
 
-#### Purpose
+| Script | Command | Description |
+|--------|---------|-------------|
+| `build` | `tsc` | Compile TypeScript to `dist/` |
+| `start` | `node dist/proxy.js` | Run the compiled server |
 
-Deletes all objects in the configured S3 bucket.
+## Security considerations
 
-#### Response Format
+- The proxy itself has **no authentication layer**. Anyone who can reach port 3000 can interact with LFS objects. Deploy behind a reverse proxy, VPN, or firewall as appropriate.
+- Ensure your AWS credentials have only the necessary S3 permissions (`s3:GetObject`, `s3:PutObject`, `s3:ListBucket`, `s3:DeleteObject`).
+- Pre-signed URLs are time-limited (1 hour) but grant direct access to S3 objects for anyone who obtains them.
 
--   Responds with a success message if deletion is successful.
+## Project structure
 
-### 4\. Health Check Endpoint
+```
+src/
+  proxy.ts          # Entire application (Express server + S3 integration)
+dist/
+  proxy.js          # Compiled output
+Dockerfile          # Multi-stage build for production image
+.github/
+  workflows/
+    build.yaml      # CI: multi-arch Docker build and push to Docker Hub
+  dependabot.yml    # Weekly npm dependency updates
+```
 
-#### Endpoint
+## License
 
--   `GET /health`
-
-#### Purpose
-
-Provides a health check endpoint to verify the status of the proxy.
-
-#### Response Format
-
--   Responds with a JSON object indicating the status.
-
-### Error Handling
-
-In case of errors during batch request processing or S3 operations, appropriate HTTP status codes are returned, and error details are logged to the console.
-
-### Security Considerations
-
--   Ensure that AWS credentials have the necessary permissions for S3 operations.
--   Configure proper firewall rules and access controls for the server running the proxy.
-
-### Conclusion
-
-The Git LFS S3 Proxy facilitates the integration of Git LFS with Amazon S3, providing a scalable solution for managing large files in Git repositories.
-
-
-## Setting Up Git LFS Configuration
-
-### .lfsconfig File
-
-To ensure that Git LFS operations are directed through the Git LFS S3 Proxy, you need to configure the Git LFS URL in your repository. This is achieved by creating a `.lfsconfig` file in the root of your Git repository.
-
-1.  Create a file named `.lfsconfig` in the root directory of your Git repository.
-
-2.  Open the `.lfsconfig` file in a text editor and add the following content:
-
-    iniCopy code
-
-    `[lfs]
-    url = http://localhost:3000/:organizationName/:repositoryName/objects/batch`
-
-    Replace `:organizationName` and `:repositoryName` with the appropriate values for your organization and repository.
-
-    Example `.lfsconfig` file content:
-
-    iniCopy code
-
-    ```
-    [lfs]
-        url = http://localhost:3000/myorganization/myrepository/objects/batch
-    ```
-
-3.  Save and commit the `.lfsconfig` file to your Git repository.
-
-### Explanation
-
-The `.lfsconfig` file specifies the URL that Git LFS should use for batch operations such as uploading and downloading large files. By setting this URL to your Git LFS S3 Proxy endpoint, you ensure that all Git LFS traffic is directed through the proxy, allowing it to generate pre-signed URLs for S3 operations.
-
-Make sure to replace the placeholders in the URL with the actual organization and repository names. This URL format corresponds to the Git LFS batch endpoint provided by the Git LFS S3 Proxy.
-
-### Updating Existing Repositories
-
-If you are adding Git LFS to an existing repository, ensure that all contributors update their local repositories with the new `.lfsconfig` file. This can be done by pulling the latest changes from the remote repository after the `.lfsconfig` file has been committed.
-
-With the `.lfsconfig` file in place, your Git LFS client will use the specified proxy URL for all interactions with large files, seamlessly integrating the Git LFS S3 Proxy into your workflow.
+[MIT](LICENSE)
