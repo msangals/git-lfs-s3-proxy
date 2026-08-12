@@ -255,14 +255,18 @@ async function validateS3Authentication() {
     }
 }
 
+// Export app for testing
+export {app, s3Client, s3Bucket};
+
 // Validate S3 client authentication on server startup
-validateS3Authentication()
-    .then(() => {
-        // Start the Git LFS server if S3 authentication is successful
-        app.listen(port, () => {
-            console.log(`Git LFS server listening at http://localhost:${port}`);
+if (require.main === module) {
+    validateS3Authentication()
+        .then(() => {
+            app.listen(port, () => {
+                console.log(`Git LFS server listening at http://localhost:${port}`);
+            });
+        })
+        .catch((error) => {
+            console.error('Unable to start Git LFS server:', error.message);
         });
-    })
-    .catch((error) => {
-        console.error('Unable to start Git LFS server:', error.message);
-    });
+}
